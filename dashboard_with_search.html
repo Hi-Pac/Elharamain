@@ -1,0 +1,104 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>لوحة التحكم - البحث في الطلبات</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f8f9fa; font-family: 'Arial', sans-serif; }
+    .table-wrapper { overflow-x: auto; }
+  </style>
+</head>
+<body class="p-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>لوحة التحكم</h3>
+    <button id="logoutBtn" class="btn btn-danger">تسجيل الخروج</button>
+  </div>
+
+  <div class="mb-3">
+    <input type="text" id="searchInput" class="form-control" placeholder="ابحث باسم العميل أو رقم الطلب..." oninput="searchOrders()">
+  </div>
+
+  <div class="card">
+    <div class="card-body table-wrapper p-0">
+      <table class="table table-bordered table-striped text-center align-middle" id="ordersTable">
+        <thead class="table-light">
+          <tr>
+            <th>رقم الطلب</th>
+            <th>اسم العميل</th>
+            <th>الكمية</th>
+            <th>تاريخ التسليم</th>
+            <th>الحالة</th>
+          </tr>
+        </thead>
+        <tbody id="ordersTableBody">
+          <tr><td colspan="5">جارٍ التحميل...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD8loT0jeGJFUxPsLzbD-ItHU2UbBxCCSU",
+      authDomain: "plastic-app-3d2af.firebaseapp.com",
+      projectId: "plastic-app-3d2af",
+      storageBucket: "plastic-app-3d2af.firebasestorage.app",
+      messagingSenderId: "847266877084",
+      appId: "1:847266877084:web:7b1881d1d8c6744bd82759",
+      measurementId: "G-0108S3D9ML"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    let allOrders = [];
+
+    function renderOrders(orders) {
+      const table = document.getElementById("ordersTableBody");
+      table.innerHTML = "";
+      orders.forEach(order => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${order.id}</td>
+          <td>${order.clientName}</td>
+          <td>${order.quantity}</td>
+          <td>${order.deliveryDate || ''}</td>
+          <td>${order.status || 'قيد الانتظار'}</td>
+        `;
+        table.appendChild(row);
+      });
+    }
+
+    function searchOrders() {
+      const query = document.getElementById("searchInput").value.toLowerCase();
+      const filtered = allOrders.filter(order =>
+        order.clientName?.toLowerCase().includes(query) ||
+        order.id.toLowerCase().includes(query)
+      );
+      renderOrders(filtered);
+    }
+
+    async function loadOrders() {
+      const querySnapshot = await getDocs(collection(db, "orders"));
+      allOrders = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      renderOrders(allOrders);
+    }
+
+    document.getElementById("logoutBtn").onclick = () => {
+      signOut(auth).then(() => window.location.href = "login.html");
+    };
+
+    onAuthStateChanged(auth, user => {
+      if (!user) window.location.href = "login.html";
+      else loadOrders();
+    });
+  </script>
+</body>
+</html>
